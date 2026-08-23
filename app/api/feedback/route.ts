@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { handleApiError } from "@/lib/errors";
+import { handleApiError, ValidationError } from "@/lib/errors";
 import {
   FEEDBACK_READ_ROLES,
   FEEDBACK_WRITE_ROLES,
@@ -7,20 +7,48 @@ import {
 } from "@/lib/permissions";
 import {
   createWorkspaceFeedback,
-  listWorkspaceFeedback,
+  listWorkspaceChannels,
+  listWorkspaceThemes,
+  queryWorkspaceFeedback,
 } from "@/lib/services/feedback-service";
 import { getAuthenticatedUser } from "@/lib/session";
-import { createFeedbackSchema } from "@/lib/validation/feedback";
+import { createFeedbackSchema, feedbackQuerySchema } from "@/lib/validation/feedback";
 import { formatZodError } from "@/lib/validation/format-zod-error";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
     requireRole(user.role, FEEDBACK_READ_ROLES);
 
-    const feedback = await listWorkspaceFeedback(user.workspaceId);
+    const params = Object.fromEntries(request.nextUrl.searchParams.entries());
+    const parsed = feedbackQuerySchema.safeParse(params);
 
-    return Response.json({ feedback });
+    if (!parsed.success) {
+      throw new ValidationError(formatZodError(parsed.error));
+    }
+
+    let result;
+    try {
+      result = await queryWorkspaceFeedback(user.workspaceId, parsed.data);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("invalid")) {
+        throw new ValidationError(error.message);
+      }
+      throw error;
+    }
+
+    const [themes, channels] = await Promise.all([
+      listWorkspaceThemes(user.workspaceId),
+      listWorkspaceChannels(user.workspaceId),
+    ]);
+
+    return Response.json({
+      items: result.items,
+      pagination: result.pagination,
+      meta: { themes, channels },
+    });
   } catch (error) {
     return handleApiError(error);
   }

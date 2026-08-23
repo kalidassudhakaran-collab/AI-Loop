@@ -1,45 +1,115 @@
-import { Role } from "@prisma/client";
+import { Suspense } from "react";
 import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 import { FeedbackList } from "@/components/feedback/FeedbackList";
+import { CsvUploadForm } from "@/components/feedback/CsvUploadForm";
+import { SimulateChannelButton } from "@/components/feedback/SimulateChannelButton";
+import { InboxFilters } from "@/components/feedback/InboxFilters";
+import { InboxPagination } from "@/components/feedback/InboxPagination";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { listWorkspaceFeedback } from "@/lib/services/feedback-service";
-import { getAuthenticatedUser } from "@/lib/session";
 import { FEEDBACK_WRITE_ROLES, hasRole } from "@/lib/permissions";
+import {
+  listWorkspaceChannels,
+  listWorkspaceThemes,
+  queryWorkspaceFeedback,
+} from "@/lib/services/feedback-service";
+import { getAuthenticatedUser } from "@/lib/session";
+import { feedbackQuerySchema } from "@/lib/validation/feedback";
 
-export default async function InboxPage() {
+type InboxPageProps = {
+  searchParams: Record<string, string | string[] | undefined>;
+};
+
+function firstValue(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+  return value ?? "";
+}
+
+export default async function InboxPage({ searchParams }: InboxPageProps) {
   const user = await getAuthenticatedUser();
-  const feedback = await listWorkspaceFeedback(user.workspaceId);
-  const canCreate = hasRole(user.role, FEEDBACK_WRITE_ROLES);
+  const canWrite = hasRole(user.role, FEEDBACK_WRITE_ROLES);
+
+  const parsed = feedbackQuerySchema.safeParse({
+    q: firstValue(searchParams.q),
+    channel: firstValue(searchParams.channel),
+    sentiment: firstValue(searchParams.sentiment),
+    themeId: firstValue(searchParams.themeId),
+    status: firstValue(searchParams.status),
+    from: firstValue(searchParams.from),
+    to: firstValue(searchParams.to),
+    page: firstValue(searchParams.page) || "1",
+    pageSize: firstValue(searchParams.pageSize) || "20",
+  });
+
+  const filters = parsed.success
+    ? parsed.data
+    : feedbackQuerySchema.parse({});
+
+  const [result, themes, channels] = await Promise.all([
+    queryWorkspaceFeedback(user.workspaceId, filters),
+    listWorkspaceThemes(user.workspaceId),
+    listWorkspaceChannels(user.workspaceId),
+  ]);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Feedback inbox</h2>
         <p className="mt-1 text-sm text-slate-500">
-          View and add customer feedback for your workspace.
+          Search, filter, triage, and ingest feedback for {user.workspaceName}.
         </p>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader
+            title="Add feedback"
+            description="Create a single feedback item."
+          />
+          <FeedbackForm canCreate={canWrite} />
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="CSV bulk upload"
+            description="Import many rows at once. Invalid rows are reported without aborting the whole file."
+          />
+          <CsvUploadForm canImport={canWrite} />
+        </Card>
       </div>
 
       <Card>
         <CardHeader
-          title="Add feedback"
-          description="Single-entry ingestion — bulk import arrives in Week 2."
+          title="Simulate channel"
+          description="Demo integration — imports sample support tickets into your workspace."
         />
-        <FeedbackForm canCreate={canCreate} />
+        <SimulateChannelButton canSimulate={canWrite} />
       </Card>
 
-      <div>
-        <h3 className="mb-3 text-lg font-medium text-slate-900">
-          All feedback ({feedback.length})
-        </h3>
-        <FeedbackList feedback={feedback} />
-      </div>
+      <Card>
+        <CardHeader
+          title="Filters"
+          description="Filters, search, and pagination run on the server and stay in the URL."
+        />
+        <Suspense fallback={<p className="text-sm text-slate-500">Loading filters…</p>}>
+          <InboxFilters channels={channels} themes={themes} />
+        </Suspense>
+      </Card>
 
-      {user.role === Role.VIEWER ? (
-        <p className="text-sm text-slate-500">
-          Viewers can read feedback but cannot create new items.
-        </p>
-      ) : null}
+      <div className="space-y-3">
+        <h3 className="text-lg font-medium text-slate-900">
+          Results ({result.pagination.total})
+        </h3>
+        <FeedbackList feedback={result.items} canEditStatus={canWrite} />
+        <Suspense fallback={null}>
+          <InboxPagination
+            page={result.pagination.page}
+            totalPages={result.pagination.totalPages}
+            total={result.pagination.total}
+          />
+        </Suspense>
+      </div>
     </div>
   );
 }

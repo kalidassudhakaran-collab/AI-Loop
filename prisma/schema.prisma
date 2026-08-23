@@ -67,6 +67,9 @@ model Feedback {
   @@index([workspaceId])
   @@index([workspaceId, status])
   @@index([workspaceId, createdAt])
+  @@index([workspaceId, channel])
+  @@index([workspaceId, sentiment])
+  @@index([workspaceId, channel, status])
 }
 
 model Theme {

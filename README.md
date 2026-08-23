@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LOOP — AI Customer-Feedback Intelligence Platform
 
-## Getting Started
+Multi-tenant customer feedback intelligence platform built for the Zidio internship (Milestone M1).
 
-First, run the development server:
+## Tech stack
+
+- Next.js 14 (App Router) + TypeScript
+- Tailwind CSS
+- PostgreSQL + Prisma ORM
+- NextAuth (Auth.js) with credentials
+- Zod for API validation
+
+## M1 features
+
+- Sign up / log in / log out with persistent sessions
+- Automatic workspace creation on signup (creator becomes ADMIN)
+- Role-based access control: ADMIN, ANALYST, VIEWER
+- Workspace-scoped data isolation on every query
+- Basic feedback create + list
+- Member management for admins
+- Seed script with demo data
+
+## Prerequisites
+
+- Node.js 18+
+- PostgreSQL database (Neon or Supabase free tier recommended)
+
+## Local setup
+
+1. **Install dependencies**
+
+```bash
+cd loop
+npm install
+```
+
+2. **Configure environment**
+
+Copy `.env.example` to `.env` and fill in values:
+
+```env
+DATABASE_URL=postgresql://user:password@host:5432/loop
+NEXTAUTH_SECRET=your-random-secret-at-least-32-chars
+NEXTAUTH_URL=http://localhost:3000
+ANTHROPIC_API_KEY=   # optional for M1
+```
+
+Generate a secret:
+
+```bash
+openssl rand -base64 32
+```
+
+3. **Run migrations and seed**
+
+```bash
+npm run db:migrate
+npm run db:seed
+```
+
+4. **Start the dev server**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Demo credentials (after seed)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Role    | Email              | Password          |
+|---------|--------------------|-------------------|
+| Admin   | admin@demo.loop    | DemoAdmin123!     |
+| Analyst | analyst@demo.loop  | DemoAnalyst123!   |
+| Viewer  | viewer@demo.loop   | DemoViewer123!    |
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+loop/
+├── app/
+│   ├── (auth)/login, signup     # Public auth pages
+│   ├── (app)/dashboard, inbox, settings  # Protected app
+│   └── api/                     # Route handlers (business logic)
+├── components/                  # UI components only
+├── lib/
+│   ├── auth.ts                  # NextAuth configuration
+│   ├── session.ts               # Server-side session helpers
+│   ├── permissions.ts           # RBAC role checks
+│   ├── services/                # Database business logic
+│   └── validation/              # Zod schemas
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.ts
+└── middleware.ts                # Protects /dashboard, /inbox, /settings
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Security notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Every feedback query is scoped by `workspaceId` from the authenticated session
+- The client never sends a trusted `workspaceId`
+- API routes enforce roles server-side (403 on forbidden actions)
+- Passwords are hashed with bcrypt (12 rounds)
+- API keys belong in `.env` only — never in client code or Git
 
-## Deploy on Vercel
+## What's next (Week 2+)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- CSV bulk import, simulated channels
+- Inbox filters, search, pagination
+- Analytics dashboard with Recharts
+- Claude AI classification, themes, Ask LOOP, VoC reports

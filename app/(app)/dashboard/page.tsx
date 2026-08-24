@@ -1,12 +1,18 @@
 import { Suspense } from "react";
 import {
   SentimentChart,
+  ThemeChangeTable,
+  ThemeTrendLineChart,
   TopThemesChart,
   VolumeChart,
 } from "@/components/dashboard/DashboardCharts";
 import { DashboardDateFilters } from "@/components/dashboard/DashboardDateFilters";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { getDashboardData } from "@/lib/services/dashboard-service";
+import {
+  getThemeTrends,
+  getThemeVolumeSeries,
+} from "@/lib/services/theme-trend-service";
 import { getAuthenticatedUser } from "@/lib/session";
 import { dashboardQuerySchema } from "@/lib/validation/feedback";
 
@@ -30,7 +36,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   });
 
   const filters = parsed.success ? parsed.data : { from: "", to: "" };
-  const data = await getDashboardData(user.workspaceId, filters);
+  const trendQuery = {
+    from: filters.from || undefined,
+    to: filters.to || undefined,
+    windowDays: 30,
+  };
+
+  const [data, trends, series] = await Promise.all([
+    getDashboardData(user.workspaceId, filters),
+    getThemeTrends(user.workspaceId, trendQuery),
+    getThemeVolumeSeries(user.workspaceId, trendQuery),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -100,6 +116,29 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               description="Most common themes linked to feedback in this workspace."
             />
             <TopThemesChart data={data.topThemes} />
+          </Card>
+
+          <Card className="xl:col-span-2">
+            <CardHeader
+              title="Theme trends"
+              description="Current period vs previous period of equal length — from real FeedbackTheme links."
+            />
+            <ThemeChangeTable rows={trends.themes.slice(0, 10)} />
+          </Card>
+
+          <Card className="xl:col-span-2">
+            <CardHeader
+              title={
+                series.themeName
+                  ? `Theme volume — ${series.themeName}`
+                  : "Theme volume over time"
+              }
+              description="Daily mentions for the leading theme in the current window."
+            />
+            <ThemeTrendLineChart
+              data={series.series}
+              themeName={series.themeName}
+            />
           </Card>
         </div>
       )}

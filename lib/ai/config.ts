@@ -4,6 +4,10 @@
  */
 export const ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-6";
 
+export function isAnthropicConfigured(): boolean {
+  return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+}
+
 export function getAnthropicApiKey(): string {
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) {

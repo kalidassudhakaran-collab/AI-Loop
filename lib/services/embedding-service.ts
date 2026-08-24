@@ -203,6 +203,7 @@ export type SimilarFeedbackHit = {
   content: string;
   channel: string;
   sentiment: string | null;
+  sentimentScore: number | null;
   customerLabel: string | null;
   createdAt: Date;
   distance: number;
@@ -238,6 +239,7 @@ export async function searchSimilarFeedback(params: {
       content: string;
       channel: string;
       sentiment: string | null;
+      sentimentScore: number | null;
       customerLabel: string | null;
       createdAt: Date;
       distance: number;
@@ -248,6 +250,7 @@ export async function searchSimilarFeedback(params: {
       f."content",
       f."channel",
       f."sentiment"::text AS "sentiment",
+      f."sentimentScore",
       f."customerLabel",
       f."createdAt",
       (e."vector" <=> ${vectorLiteral}::vector(768)) AS "distance"
@@ -262,6 +265,10 @@ export async function searchSimilarFeedback(params: {
 
   return rows.map((row) => ({
     ...row,
+    sentimentScore:
+      row.sentimentScore === null || row.sentimentScore === undefined
+        ? null
+        : Number(row.sentimentScore),
     distance: Number(row.distance),
   }));
 }

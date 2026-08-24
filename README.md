@@ -48,6 +48,13 @@ Multi-tenant customer feedback intelligence platform built for the Zidio interns
 - Optional Ollama embedding provider (never fakes vectors)
 - pgvector-ready Embedding model + semantic retrieval helper for M3-C
 
+### M3-C — Ask LOOP
+
+- Grounded Q&A: question → embed → retrieve → evidence → optional Claude answer
+- Validated citations (only retrieved workspace evidence)
+- Clear states when embeddings or Anthropic are unavailable
+- Never fabricates answers, embeddings, or evidence
+
 ## Prerequisites
 
 - Node.js 18+
@@ -141,8 +148,7 @@ loop/
 - API routes enforce roles server-side (403 on forbidden actions)
 - Passwords are hashed with bcrypt (12 rounds)
 
-## What's next (M3-C)
+## What's next (Week 4)
 
-- Ask LOOP chat UI
-- RAG grounded answers with evidence citations
-- Voice-of-Customer reports (Week 4)
+- Voice-of-Customer reports
+- Production polish and demo assets

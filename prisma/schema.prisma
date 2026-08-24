@@ -99,13 +99,26 @@ model FeedbackTheme {
   @@id([feedbackId, themeId])
 }
 
-/// Prepared for Week 3 Ask LOOP semantic search (pgvector migration planned).
+/// Prepared for Week 3 Ask LOOP semantic search (pgvector).
+enum EmbeddingStatus {
+  PENDING
+  READY
+  FAILED
+}
+
 model Embedding {
-  id         String   @id @default(cuid())
-  feedbackId String   @unique
-  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  vector     Float[]
-  createdAt  DateTime @default(now())
+  id         String          @id @default(cuid())
+  feedbackId String          @unique
+  feedback   Feedback        @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  dimensions Int?
+  provider   String?
+  model      String?
+  status     EmbeddingStatus @default(PENDING)
+  error      String?
+  /// Real pgvector column (see SQL migration). Not a fake Float[].
+  vector     Unsupported("vector")?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 }
 
 model Report {

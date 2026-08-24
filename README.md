@@ -40,6 +40,14 @@ Multi-tenant customer feedback intelligence platform built for the Zidio interns
 - Stores sentiment, score, themes, feature area, confidence
 - ADMIN/ANALYST only; never runs on page load
 
+### M3-B — Themes, trends & embedding infrastructure
+
+- Deterministic canonical theme normalization + duplicate consolidation
+- Theme trends (current vs previous period) on the dashboard
+- Themes page with counts and embedding status
+- Optional Ollama embedding provider (never fakes vectors)
+- pgvector-ready Embedding model + semantic retrieval helper for M3-C
+
 ## Prerequisites
 
 - Node.js 18+
@@ -133,8 +141,8 @@ loop/
 - API routes enforce roles server-side (403 on forbidden actions)
 - Passwords are hashed with bcrypt (12 rounds)
 
-## What's next (M3-B / M3-C)
+## What's next (M3-C)
 
-- Theme clustering & trend detection
-- Embeddings + Ask LOOP (RAG)
-- Voice-of-Customer reports
+- Ask LOOP chat UI
+- RAG grounded answers with evidence citations
+- Voice-of-Customer reports (Week 4)

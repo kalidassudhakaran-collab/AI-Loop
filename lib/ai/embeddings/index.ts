@@ -1,4 +1,5 @@
 import { OllamaEmbeddingProvider } from "@/lib/ai/embeddings/ollama-provider";
+import { getExpectedEmbeddingDimensions } from "@/lib/ai/embeddings/config";
 import {
   EmbeddingProviderError,
   type EmbeddingGenerationResult,
@@ -28,15 +29,18 @@ export function getEmbeddingProviderStatus(): {
   configured: boolean;
   provider: string | null;
   message: string;
+  expectedDimensions: number;
 } {
+  const expectedDimensions = getExpectedEmbeddingDimensions();
   const selected = process.env.EMBEDDING_PROVIDER?.trim().toLowerCase() || null;
 
   if (!selected || selected === "none" || selected === "off") {
     return {
       configured: false,
       provider: null,
+      expectedDimensions,
       message:
-        "Embedding provider not configured. Set EMBEDDING_PROVIDER=ollama and pull an embedding model to enable semantic retrieval.",
+        "Embedding provider not configured. Set EMBEDDING_PROVIDER=ollama and pull nomic-embed-text (768-d) to enable semantic retrieval.",
     };
   }
 
@@ -45,6 +49,7 @@ export function getEmbeddingProviderStatus(): {
     return {
       configured: false,
       provider: selected,
+      expectedDimensions,
       message: `Unknown or unavailable embedding provider "${selected}". Supported: ollama.`,
     };
   }
@@ -52,7 +57,8 @@ export function getEmbeddingProviderStatus(): {
   return {
     configured: true,
     provider: provider.id,
-    message: `Embedding provider ready: ${provider.id}`,
+    expectedDimensions,
+    message: `Embedding provider ready: ${provider.id} (expects ${expectedDimensions}-d vectors)`,
   };
 }
 
@@ -61,9 +67,17 @@ export async function generateEmbedding(
 ): Promise<EmbeddingGenerationResult> {
   const provider = getEmbeddingProvider();
   if (!provider) {
+    throw new EmbeddingProviderError(getEmbeddingProviderStatus().message);
+  }
+
+  const result = await provider.generateEmbedding(text);
+  const expected = getExpectedEmbeddingDimensions();
+
+  if (result.dimensions !== expected) {
     throw new EmbeddingProviderError(
-      getEmbeddingProviderStatus().message,
+      `Embedding dimension mismatch: got ${result.dimensions}, expected ${expected} (nomic-embed-text / vector(${expected})).`,
     );
   }
-  return provider.generateEmbedding(text);
+
+  return result;
 }

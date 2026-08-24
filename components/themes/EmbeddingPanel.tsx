@@ -17,6 +17,7 @@ type EmbeddingPanelProps = {
       configured: boolean;
       provider: string | null;
       message: string;
+      expectedDimensions?: number;
     };
   };
   sampleFeedbackIds: string[];
@@ -94,6 +95,11 @@ export function EmbeddingPanel({
           {stats.provider.configured
             ? stats.provider.provider
             : "not configured"}
+        </p>
+        <p className="mt-1">
+          <span className="font-medium">Expected dimensions:</span>{" "}
+          {stats.provider.expectedDimensions ?? 768} (nomic-embed-text /
+          vector(768))
         </p>
         <p className="mt-2 text-slate-500">{stats.provider.message}</p>
         <p className="mt-2 text-slate-500">

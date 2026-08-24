@@ -1,5 +1,9 @@
 import { Prisma } from "@prisma/client";
-import { generateEmbedding, getEmbeddingProviderStatus } from "@/lib/ai/embeddings";
+import {
+  generateEmbedding,
+  getEmbeddingProviderStatus,
+} from "@/lib/ai/embeddings";
+import { getExpectedEmbeddingDimensions } from "@/lib/ai/embeddings/config";
 import { EmbeddingProviderError } from "@/lib/ai/embeddings/types";
 import { prisma } from "@/lib/db";
 import { AppError, NotFoundError } from "@/lib/errors";
@@ -14,6 +18,15 @@ export class VectorSupportError extends AppError {
 function toVectorLiteral(vector: number[]): string {
   // pgvector text input format: [0.1,0.2,...]
   return `[${vector.map((value) => Number(value).toString()).join(",")}]`;
+}
+
+function assertFixedDimensions(vector: number[]): void {
+  const expected = getExpectedEmbeddingDimensions();
+  if (vector.length !== expected) {
+    throw new EmbeddingProviderError(
+      `Embedding must have exactly ${expected} dimensions (got ${vector.length}).`,
+    );
+  }
 }
 
 export async function isPgvectorAvailable(): Promise<boolean> {
@@ -56,6 +69,7 @@ export async function embedAndStoreFeedback(
   let generated;
   try {
     generated = await generateEmbedding(feedback.content);
+    assertFixedDimensions(generated.vector);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Embedding generation failed";
@@ -80,6 +94,7 @@ export async function embedAndStoreFeedback(
   }
 
   const vectorLiteral = toVectorLiteral(generated.vector);
+  assertFixedDimensions(generated.vector);
 
   await prisma.embedding.upsert({
     where: { feedbackId },
@@ -101,9 +116,10 @@ export async function embedAndStoreFeedback(
     },
   });
 
+  // Fixed cast vector(768) — must be a SQL literal, not a bound parameter.
   await prisma.$executeRaw`
     UPDATE "Embedding"
-    SET "vector" = ${vectorLiteral}::vector,
+    SET "vector" = ${vectorLiteral}::vector(768),
         "updatedAt" = NOW()
     WHERE "feedbackId" = ${feedbackId}
   `;
@@ -211,6 +227,8 @@ export async function searchSimilarFeedback(params: {
     throw new EmbeddingProviderError("queryEmbedding must not be empty");
   }
 
+  assertFixedDimensions(params.queryEmbedding);
+
   const limit = Math.min(Math.max(params.limit ?? 8, 1), 50);
   const vectorLiteral = toVectorLiteral(params.queryEmbedding);
 
@@ -232,13 +250,13 @@ export async function searchSimilarFeedback(params: {
       f."sentiment"::text AS "sentiment",
       f."customerLabel",
       f."createdAt",
-      (e."vector" <=> ${vectorLiteral}::vector) AS "distance"
+      (e."vector" <=> ${vectorLiteral}::vector(768)) AS "distance"
     FROM "Embedding" e
     INNER JOIN "Feedback" f ON f."id" = e."feedbackId"
     WHERE f."workspaceId" = ${params.workspaceId}
       AND e."status" = 'READY'
       AND e."vector" IS NOT NULL
-    ORDER BY e."vector" <=> ${vectorLiteral}::vector
+    ORDER BY e."vector" <=> ${vectorLiteral}::vector(768)
     LIMIT ${limit}
   `);
 

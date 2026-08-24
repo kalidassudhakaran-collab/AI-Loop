@@ -115,8 +115,9 @@ model Embedding {
   model      String?
   status     EmbeddingStatus @default(PENDING)
   error      String?
-  /// Real pgvector column (see SQL migration). Not a fake Float[].
-  vector     Unsupported("vector")?
+  /// Real pgvector column: vector(768) for nomic-embed-text. Not a fake Float[].
+  /// See SQL migration — HNSW requires a fixed dimension.
+  vector     Unsupported("vector(768)")?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 }

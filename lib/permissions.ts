@@ -23,6 +23,12 @@ export const MEMBER_MANAGE_ROLES: Role[] = [Role.ADMIN];
 /** Roles allowed to trigger AI classification. */
 export const AI_CLASSIFY_ROLES: Role[] = [Role.ADMIN, Role.ANALYST];
 
+/** Roles allowed to mutate themes / generate embeddings. */
+export const THEME_WRITE_ROLES: Role[] = [Role.ADMIN, Role.ANALYST];
+
+/** Roles allowed to generate embeddings. */
+export const EMBEDDING_WRITE_ROLES: Role[] = [Role.ADMIN, Role.ANALYST];
+
 export function hasRole(userRole: Role, allowedRoles: readonly Role[]): boolean {
   return allowedRoles.includes(userRole);
 }

@@ -1,18 +1,8 @@
 import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
 import { classifyFeedbackContent } from "@/lib/services/ai/classification-service";
+import { assignThemesToFeedback } from "@/lib/services/theme-service";
 import type { ClassificationResult } from "@/lib/validation/classification";
-
-const THEME_COLORS = [
-  "#6366f1",
-  "#ef4444",
-  "#f59e0b",
-  "#10b981",
-  "#8b5cf6",
-  "#0ea5e9",
-  "#14b8a6",
-  "#f97316",
-];
 
 export type SavedClassification = {
   feedbackId: string;
@@ -49,51 +39,12 @@ export async function classifyAndSaveFeedback(
   const classification = await classifyFeedbackContent(feedback.content);
 
   const saved = await prisma.$transaction(async (tx) => {
-    // Replace previous theme links for this feedback.
-    await tx.feedbackTheme.deleteMany({
-      where: { feedbackId },
-    });
-
-    const themeLinks: Array<{ name: string; confidence: number }> = [];
-
-    for (const themeInput of classification.themes) {
-      let theme = await tx.theme.findUnique({
-        where: {
-          workspaceId_name: {
-            workspaceId,
-            name: themeInput.name,
-          },
-        },
-      });
-
-      if (!theme) {
-        const color =
-          THEME_COLORS[
-            Math.abs(hashString(themeInput.name)) % THEME_COLORS.length
-          ];
-        theme = await tx.theme.create({
-          data: {
-            name: themeInput.name,
-            description: `Auto-created from AI classification`,
-            color,
-            workspaceId,
-          },
-        });
-      }
-
-      await tx.feedbackTheme.create({
-        data: {
-          feedbackId,
-          themeId: theme.id,
-          confidence: themeInput.confidence,
-        },
-      });
-
-      themeLinks.push({
-        name: theme.name,
-        confidence: themeInput.confidence,
-      });
-    }
+    const themeLinks = await assignThemesToFeedback(
+      workspaceId,
+      feedbackId,
+      classification.themes,
+      tx,
+    );
 
     const updated = await tx.feedback.update({
       where: { id: feedbackId },
@@ -113,7 +64,10 @@ export async function classifyAndSaveFeedback(
       featureArea: classification.featureArea,
       confidence: classification.confidence,
       classifiedAt: updated.classifiedAt!,
-      themes: themeLinks,
+      themes: themeLinks.map((link) => ({
+        name: link.name,
+        confidence: link.confidence,
+      })),
     };
   });
 
@@ -174,7 +128,6 @@ export async function classifyFeedbackBatch(
   );
   await Promise.all(workers);
 
-  // Keep results in request order.
   const byId = new Map(results.map((item) => [item.feedbackId, item]));
   const ordered = uniqueIds.map(
     (id) =>
@@ -190,13 +143,4 @@ export async function classifyFeedbackBatch(
     succeeded: ordered.filter((item) => item.ok).length,
     failed: ordered.filter((item) => !item.ok).length,
   };
-}
-
-function hashString(value: string): number {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash << 5) - hash + value.charCodeAt(i);
-    hash |= 0;
-  }
-  return hash;
 }

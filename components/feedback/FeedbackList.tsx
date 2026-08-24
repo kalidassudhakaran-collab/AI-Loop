@@ -3,6 +3,7 @@
 import type { Feedback, FeedbackStatus, Sentiment } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ClassifyFeedbackButton } from "@/components/feedback/ClassifyFeedbackButton";
 import { Badge } from "@/components/ui/Badge";
 
 type FeedbackThemeLink = {
@@ -15,12 +16,16 @@ type FeedbackThemeLink = {
 };
 
 type FeedbackRow = Feedback & {
+  featureArea?: string | null;
+  classificationConfidence?: number | null;
+  classifiedAt?: Date | null;
   themes?: FeedbackThemeLink[];
 };
 
 type FeedbackListProps = {
   feedback: FeedbackRow[];
   canEditStatus: boolean;
+  canClassify: boolean;
 };
 
 function sentimentTone(sentiment: Sentiment | null) {
@@ -49,7 +54,11 @@ function statusTone(status: FeedbackStatus) {
   }
 }
 
-export function FeedbackList({ feedback, canEditStatus }: FeedbackListProps) {
+export function FeedbackList({
+  feedback,
+  canEditStatus,
+  canClassify,
+}: FeedbackListProps) {
   const router = useRouter();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -99,21 +108,46 @@ export function FeedbackList({ feedback, canEditStatus }: FeedbackListProps) {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Content</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Channel</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Themes</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Sentiment</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Created</th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  Content
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  Channel
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  Themes
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  Sentiment
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  AI
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  Created
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {feedback.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50">
+                <tr key={item.id} className="align-top hover:bg-slate-50">
                   <td className="max-w-md px-4 py-3 text-slate-900">
                     <p>{item.content}</p>
                     {item.customerLabel ? (
-                      <p className="mt-1 text-xs text-slate-500">{item.customerLabel}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {item.customerLabel}
+                      </p>
+                    ) : null}
+                    {item.featureArea ? (
+                      <p className="mt-1 text-xs text-indigo-700">
+                        Feature area: {item.featureArea}
+                        {typeof item.classificationConfidence === "number"
+                          ? ` · ${Math.round(item.classificationConfidence * 100)}%`
+                          : ""}
+                      </p>
                     ) : null}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-600">
@@ -136,6 +170,11 @@ export function FeedbackList({ feedback, canEditStatus }: FeedbackListProps) {
                     <Badge tone={sentimentTone(item.sentiment)}>
                       {item.sentiment ?? "Unclassified"}
                     </Badge>
+                    {typeof item.sentimentScore === "number" ? (
+                      <p className="mt-1 text-xs text-slate-500">
+                        {item.sentimentScore.toFixed(2)}
+                      </p>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3">
                     {canEditStatus ? (
@@ -158,6 +197,13 @@ export function FeedbackList({ feedback, canEditStatus }: FeedbackListProps) {
                     ) : (
                       <Badge tone={statusTone(item.status)}>{item.status}</Badge>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <ClassifyFeedbackButton
+                      feedbackId={item.id}
+                      canClassify={canClassify}
+                      alreadyClassified={Boolean(item.classifiedAt)}
+                    />
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                     {new Intl.DateTimeFormat("en-US", {

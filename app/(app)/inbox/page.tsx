@@ -3,10 +3,15 @@ import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 import { FeedbackList } from "@/components/feedback/FeedbackList";
 import { CsvUploadForm } from "@/components/feedback/CsvUploadForm";
 import { SimulateChannelButton } from "@/components/feedback/SimulateChannelButton";
+import { BatchClassifyPanel } from "@/components/feedback/BatchClassifyPanel";
 import { InboxFilters } from "@/components/feedback/InboxFilters";
 import { InboxPagination } from "@/components/feedback/InboxPagination";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { FEEDBACK_WRITE_ROLES, hasRole } from "@/lib/permissions";
+import {
+  AI_CLASSIFY_ROLES,
+  FEEDBACK_WRITE_ROLES,
+  hasRole,
+} from "@/lib/permissions";
 import {
   listWorkspaceChannels,
   listWorkspaceThemes,
@@ -29,6 +34,7 @@ function firstValue(value: string | string[] | undefined): string {
 export default async function InboxPage({ searchParams }: InboxPageProps) {
   const user = await getAuthenticatedUser();
   const canWrite = hasRole(user.role, FEEDBACK_WRITE_ROLES);
+  const canClassify = hasRole(user.role, AI_CLASSIFY_ROLES);
 
   const parsed = feedbackQuerySchema.safeParse({
     q: firstValue(searchParams.q),
@@ -89,6 +95,17 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 
       <Card>
         <CardHeader
+          title="AI classification"
+          description="Explicitly classify feedback with Claude. Never runs automatically on page load."
+        />
+        <BatchClassifyPanel
+          canClassify={canClassify}
+          feedbackIds={result.items.map((item) => item.id)}
+        />
+      </Card>
+
+      <Card>
+        <CardHeader
           title="Filters"
           description="Filters, search, and pagination run on the server and stay in the URL."
         />
@@ -101,7 +118,11 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
         <h3 className="text-lg font-medium text-slate-900">
           Results ({result.pagination.total})
         </h3>
-        <FeedbackList feedback={result.items} canEditStatus={canWrite} />
+        <FeedbackList
+          feedback={result.items}
+          canEditStatus={canWrite}
+          canClassify={canClassify}
+        />
         <Suspense fallback={null}>
           <InboxPagination
             page={result.pagination.page}

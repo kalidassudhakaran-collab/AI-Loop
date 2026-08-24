@@ -1,6 +1,6 @@
 # LOOP — AI Customer-Feedback Intelligence Platform
 
-Multi-tenant customer feedback intelligence platform built for the Zidio internship (Milestones M1 + M2).
+Multi-tenant customer feedback intelligence platform built for the Zidio internship (Milestones M1–M3-A).
 
 ## Tech stack
 
@@ -11,6 +11,7 @@ Multi-tenant customer feedback intelligence platform built for the Zidio interns
 - Zod for API validation
 - Recharts for analytics
 - Papaparse for CSV import
+- Anthropic Claude API (`@anthropic-ai/sdk`) for classification
 
 ## Features
 
@@ -31,6 +32,13 @@ Multi-tenant customer feedback intelligence platform built for the Zidio interns
 - Inline status workflow: NEW → REVIEWED → ACTIONED
 - Analytics dashboard with Recharts (volume, sentiment, top themes)
 - Expanded seed: 125 feedback items + 8 themes
+
+### M3-A — Claude classification
+
+- Server-side Anthropic Claude classification (structured JSON + Zod)
+- Single-item and controlled batch classify APIs
+- Stores sentiment, score, themes, feature area, confidence
+- ADMIN/ANALYST only; never runs on page load
 
 ## Prerequisites
 
@@ -60,7 +68,8 @@ Copy `.env.example` to `.env`:
 DATABASE_URL=postgresql://loop_user:loop_password@localhost:5432/loop
 NEXTAUTH_SECRET=your-random-secret-at-least-32-chars
 NEXTAUTH_URL=http://localhost:3000
-ANTHROPIC_API_KEY=   # Week 3 — optional for M1/M2
+ANTHROPIC_API_KEY=   # required for M3-A classification
+ANTHROPIC_MODEL=     # optional — defaults to claude-sonnet-4-6
 ```
 
 4. **Migrate and seed**
@@ -69,6 +78,8 @@ ANTHROPIC_API_KEY=   # Week 3 — optional for M1/M2
 npm run db:migrate
 npm run db:seed
 ```
+
+> If Postgres was stopped, start it first: `docker compose up -d`
 
 5. **Start the dev server**
 
@@ -98,14 +109,16 @@ loop/
 │   ├── (auth)/login, signup
 │   ├── (app)/dashboard, inbox, settings
 │   └── api/
-│       ├── feedback/          # list, create, status, import, simulate
-│       ├── dashboard/         # analytics payload
+│       ├── feedback/          # list, create, status, import, simulate, classify
+│       ├── dashboard/
 │       └── members/
 ├── components/
-│   ├── feedback/              # inbox filters, CSV, simulate, list
-│   └── dashboard/             # Recharts charts
+│   ├── feedback/
+│   └── dashboard/
 ├── lib/
-│   ├── services/              # tenant-scoped business logic
+│   ├── ai/                    # Claude client, prompts, theme normalize
+│   ├── services/
+│   │   └── ai/                # classification orchestration + DB save
 │   └── validation/
 ├── prisma/
 └── middleware.ts
@@ -115,13 +128,13 @@ loop/
 
 - Every feedback query is scoped by `workspaceId` from the authenticated session
 - The client never sends a trusted `workspaceId`
-- CSV/simulate inserts always use the session workspace
+- CSV/simulate/classify inserts always use the session workspace
+- Anthropic API key is server-only (`ANTHROPIC_API_KEY`, never `NEXT_PUBLIC_*`)
 - API routes enforce roles server-side (403 on forbidden actions)
 - Passwords are hashed with bcrypt (12 rounds)
 
-## What's next (Week 3)
+## What's next (M3-B / M3-C)
 
-- Claude AI auto-classification
-- Theme clustering & trends
-- Ask LOOP (RAG)
+- Theme clustering & trend detection
+- Embeddings + Ask LOOP (RAG)
 - Voice-of-Customer reports

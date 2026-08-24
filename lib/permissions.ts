@@ -20,6 +20,9 @@ export const FEEDBACK_READ_ROLES: Role[] = [
 /** Roles allowed to manage workspace members. */
 export const MEMBER_MANAGE_ROLES: Role[] = [Role.ADMIN];
 
+/** Roles allowed to trigger AI classification. */
+export const AI_CLASSIFY_ROLES: Role[] = [Role.ADMIN, Role.ANALYST];
+
 export function hasRole(userRole: Role, allowedRoles: readonly Role[]): boolean {
   return allowedRoles.includes(userRole);
 }

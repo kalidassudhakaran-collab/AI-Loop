@@ -12,3 +12,22 @@ body {
   background: var(--background);
   font-family: var(--font-inter), system-ui, sans-serif;
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}

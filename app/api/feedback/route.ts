@@ -5,6 +5,7 @@ import {
   FEEDBACK_WRITE_ROLES,
   requireRole,
 } from "@/lib/permissions";
+import { classifyOnIngest } from "@/lib/services/ai/queue-classification";
 import {
   createWorkspaceFeedback,
   listWorkspaceChannels,
@@ -16,6 +17,7 @@ import { createFeedbackSchema, feedbackQuerySchema } from "@/lib/validation/feed
 import { formatZodError } from "@/lib/validation/format-zod-error";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,7 +76,12 @@ export async function POST(request: NextRequest) {
       parsed.data,
     );
 
-    return Response.json({ feedback }, { status: 201 });
+    const classification = await classifyOnIngest(
+      user.workspaceId,
+      feedback.id,
+    );
+
+    return Response.json({ feedback, classification }, { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }

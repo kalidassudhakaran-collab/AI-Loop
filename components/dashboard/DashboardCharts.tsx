@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Area,
   AreaChart,
@@ -24,7 +25,7 @@ const SENTIMENT_COLORS: Record<string, string> = {
 
 type VolumePoint = { date: string; count: number };
 type SentimentPoint = { name: string; value: number };
-type ThemePoint = { name: string; count: number; color: string };
+type ThemePoint = { themeId?: string; name: string; count: number; color: string };
 
 export function VolumeChart({ data }: { data: VolumePoint[] }) {
   if (data.length === 0) {
@@ -94,25 +95,41 @@ export function TopThemesChart({ data }: { data: ThemePoint[] }) {
   }
 
   return (
-    <div className="h-72 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ left: 24 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-          <YAxis
-            type="category"
-            dataKey="name"
-            width={110}
-            tick={{ fontSize: 12 }}
-          />
-          <Tooltip />
-          <Bar dataKey="count" name="Mentions" radius={[0, 4, 4, 0]}>
-            {data.map((entry) => (
-              <Cell key={entry.name} fill={entry.color || "#6366f1"} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+    <div>
+      <div className="h-72 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ left: 24 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={110}
+              tick={{ fontSize: 12 }}
+            />
+            <Tooltip />
+            <Bar dataKey="count" name="Mentions" radius={[0, 4, 4, 0]}>
+              {data.map((entry) => (
+                <Cell key={entry.name} fill={entry.color || "#6366f1"} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <ul className="mt-3 flex flex-wrap gap-2 text-sm">
+        {data.map((theme) =>
+          theme.themeId ? (
+            <li key={theme.themeId}>
+              <Link
+                href={`/inbox?themeId=${theme.themeId}`}
+                className="rounded-full bg-slate-100 px-2.5 py-1 text-indigo-700 hover:bg-indigo-50 hover:underline"
+              >
+                {theme.name} ({theme.count})
+              </Link>
+            </li>
+          ) : null,
+        )}
+      </ul>
     </div>
   );
 }
@@ -154,6 +171,7 @@ export function ThemeTrendLineChart({
 }
 
 type ChangeRow = {
+  themeId?: string;
   theme: string;
   currentCount: number;
   previousCount: number;
@@ -184,8 +202,19 @@ export function ThemeChangeTable({ rows }: { rows: ChangeRow[] }) {
         </thead>
         <tbody className="divide-y divide-slate-100 bg-white">
           {rows.map((row) => (
-            <tr key={row.theme}>
-              <td className="px-4 py-3 font-medium text-slate-900">{row.theme}</td>
+            <tr key={row.themeId ?? row.theme}>
+              <td className="px-4 py-3 font-medium text-slate-900">
+                {row.themeId ? (
+                  <Link
+                    href={`/inbox?themeId=${row.themeId}`}
+                    className="text-indigo-700 hover:underline"
+                  >
+                    {row.theme}
+                  </Link>
+                ) : (
+                  row.theme
+                )}
+              </td>
               <td className="px-4 py-3 text-slate-700">{row.currentCount}</td>
               <td className="px-4 py-3 text-slate-700">{row.previousCount}</td>
               <td className="px-4 py-3">

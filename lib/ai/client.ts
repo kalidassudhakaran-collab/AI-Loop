@@ -65,7 +65,7 @@ export async function completeClaudeText(params: {
         message.includes("unauthorized")
       ) {
         throw new AiServiceError(
-          "Anthropic API authentication failed. Check ANTHROPIC_API_KEY.",
+          "Anthropic API authentication failed. ADD API: check ANTHROPIC_API_KEY in .env.",
           502,
         );
       }
@@ -91,7 +91,7 @@ export async function completeClaudeText(params: {
     }
 
     throw new AiServiceError(
-      "Unable to complete AI classification. Please try again.",
+      "Unable to complete the AI request. Please try again.",
       502,
     );
   }

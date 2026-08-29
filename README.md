@@ -1,6 +1,10 @@
 # LOOP — AI Customer-Feedback Intelligence Platform
 
-Multi-tenant customer feedback intelligence platform built for the Zidio internship (Milestones M1–M3-A).
+Multi-tenant Voice-of-Customer product for the Zidio internship (Milestones **M1–M4**).
+
+LOOP turns scattered support tickets, app-store reviews, surveys, and sales notes into themes, sentiment, trends, grounded answers, and a leadership-ready digest.
+
+Headline for the demo: **LOOP turns scattered customer feedback into a ranked, evidence-backed list of what to do next.**
 
 ## Tech stack
 
@@ -11,7 +15,8 @@ Multi-tenant customer feedback intelligence platform built for the Zidio interns
 - Zod for API validation
 - Recharts for analytics
 - Papaparse for CSV import
-- Anthropic Claude API (`@anthropic-ai/sdk`) for classification
+- Anthropic Claude API (`@anthropic-ai/sdk`) for classification, Ask LOOP, and VoC reports
+- Optional Ollama embeddings + pgvector for semantic retrieval
 
 ## Features
 
@@ -33,32 +38,41 @@ Multi-tenant customer feedback intelligence platform built for the Zidio interns
 - Analytics dashboard with Recharts (volume, sentiment, top themes)
 - Expanded seed: 125 feedback items + 8 themes
 
-### M3-A — Claude classification
+### M3 — AI features
 
 - Server-side Anthropic Claude classification (structured JSON + Zod)
-- Single-item and controlled batch classify APIs
-- Stores sentiment, score, themes, feature area, confidence
-- ADMIN/ANALYST only; never runs on page load
+- Classify on ingest (single item awaited; bulk queued) plus manual re-classify
+- Canonical theme clustering, trends vs previous period, and inbox drill-down
+- Grounded Ask LOOP: question → embed → retrieve → evidence → optional Claude answer
+- Validated citations; never fabricates answers, embeddings, or evidence
 
-### M3-B — Themes, trends & embedding infrastructure
+### M4 — Voice-of-Customer reports & production polish
 
-- Deterministic canonical theme normalization + duplicate consolidation
-- Theme trends (current vs previous period) on the dashboard
-- Themes page with counts and embedding status
-- Optional Ollama embedding provider (never fakes vectors)
-- pgvector-ready Embedding model + semantic retrieval helper for M3-C
+- One-click VoC report for a chosen period (7 / 30 / 90 days or custom)
+- Pre-computed stats (volume, sentiment shift, top themes, verbatim quotes) then Claude narrative
+- Saved reports, shareable page, and Print / Save as PDF
+- Loading, empty, error, 404, and 403 states
+- Responsive navigation and skip-to-content
 
-### M3-C — Ask LOOP
+## Architecture
 
-- Grounded Q&A: question → embed → retrieve → evidence → optional Claude answer
-- Validated citations (only retrieved workspace evidence)
-- Clear states when embeddings or Anthropic are unavailable
-- Never fabricates answers, embeddings, or evidence
+```
+Browser (App Router UI)
+    │  session cookie only — never a trusted workspaceId
+    ▼
+Next.js route handlers  (auth + RBAC + Zod)
+    ├── Prisma → PostgreSQL  (every query filtered by session workspaceId)
+    ├── Claude API           (server-side; ANTHROPIC_API_KEY never NEXT_PUBLIC_*)
+    └── Embeddings           (optional Ollama + pgvector for Ask LOOP)
+```
+
+Business logic lives in `lib/services/*`. UI components call `/api/*` and do not talk to Claude or the database.
 
 ## Prerequisites
 
 - Node.js 18+
 - PostgreSQL (Docker Compose included, or Neon/Supabase)
+- Anthropic API key (required for live classification / Ask LOOP / Claude-written reports)
 
 ## Local setup
 
@@ -77,14 +91,16 @@ npm install
 
 3. **Configure environment**
 
-Copy `.env.example` to `.env`:
+Copy `.env.example` to `.env`. `.env` is gitignored so you can push without keys.
 
 ```env
-DATABASE_URL=postgresql://loop_user:loop_password@localhost:5432/loop
+DATABASE_URL=postgresql://loop_user:loop_password@localhost:5433/loop
 NEXTAUTH_SECRET=your-random-secret-at-least-32-chars
 NEXTAUTH_URL=http://localhost:3000
-ANTHROPIC_API_KEY=   # required for M3-A classification
-ANTHROPIC_MODEL=     # optional — defaults to claude-sonnet-4-6
+# ADD API: paste Anthropic key in .env only — never in git
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=
+EMBEDDING_PROVIDER=
 ```
 
 4. **Migrate and seed**
@@ -112,9 +128,20 @@ Open [http://localhost:3000](http://localhost:3000)
 | Analyst | analyst@demo.loop  | DemoAnalyst123!   |
 | Viewer  | viewer@demo.loop   | DemoViewer123!    |
 
+Workspace name: **Acme SaaS (Demo)** — 125 feedback items across five channels.
+
 ## Sample CSV
 
 Use [`sample-feedback.csv`](sample-feedback.csv) to test bulk import (includes intentional invalid rows).
+
+## Product tour (what graders should click)
+
+1. **Log in** as Admin, then switch to Analyst and Viewer to confirm RBAC (Viewers cannot ingest, classify, or generate reports).
+2. **Dashboard** — volume, sentiment, top themes, and period-over-period theme trends. Click a theme name to open the filtered inbox.
+3. **Inbox** — add one item, CSV upload, simulate support tickets, search/filter, change status NEW → REVIEWED → ACTIONED.
+4. **Themes** — counts and drill-down into inbox items.
+5. **Ask LOOP** — e.g. “What are users saying about onboarding?” Answers cite retrieved feedback only.
+6. **Reports** — generate a last-30-days Voice-of-Customer digest, reopen it later, open the shareable page, Print / Save as PDF.
 
 ## Project structure
 
@@ -122,33 +149,47 @@ Use [`sample-feedback.csv`](sample-feedback.csv) to test bulk import (includes i
 loop/
 ├── app/
 │   ├── (auth)/login, signup
-│   ├── (app)/dashboard, inbox, settings
+│   ├── (app)/dashboard, inbox, ask, themes, reports, settings
+│   ├── share/reports/[id]     # print-friendly shareable VoC page
 │   └── api/
 │       ├── feedback/          # list, create, status, import, simulate, classify
 │       ├── dashboard/
+│       ├── themes/
+│       ├── ask/
+│       ├── reports/           # VoC generation + fetch
 │       └── members/
 ├── components/
-│   ├── feedback/
-│   └── dashboard/
 ├── lib/
-│   ├── ai/                    # Claude client, prompts, theme normalize
-│   ├── services/
-│   │   └── ai/                # classification orchestration + DB save
-│   └── validation/
+│   ├── ai/                    # Claude client, prompts, embeddings
+│   ├── services/              # domain logic (no UI)
+│   └── validation/            # Zod schemas
 ├── prisma/
 └── middleware.ts
 ```
 
 ## Security notes
 
-- Every feedback query is scoped by `workspaceId` from the authenticated session
+- Every feedback, theme, and report query is scoped by `workspaceId` from the authenticated session
 - The client never sends a trusted `workspaceId`
-- CSV/simulate/classify inserts always use the session workspace
+- CSV / simulate / classify / report inserts always use the session workspace
 - Anthropic API key is server-only (`ANTHROPIC_API_KEY`, never `NEXT_PUBLIC_*`)
 - API routes enforce roles server-side (403 on forbidden actions)
 - Passwords are hashed with bcrypt (12 rounds)
+- VoC reports use pre-computed stats so Claude cannot invent counts
 
-## What's next (Week 4)
+## Deploy (Vercel)
 
-- Voice-of-Customer reports
-- Production polish and demo assets
+1. Push this repo to GitHub.
+2. Import the **loop** directory (or repo root that contains `loop/`) in Vercel.
+3. In Vercel project settings, ADD API and other secrets as env vars (`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ANTHROPIC_API_KEY`). Do not put keys in the repo.
+4. Point `DATABASE_URL` at hosted Postgres (Neon or Supabase). Enable the `vector` extension if you use Ask LOOP embeddings.
+5. Run migrations against production: `npx prisma migrate deploy` (from `loop/`) then `npx prisma db seed`.
+6. Confirm the three demo roles can log in on the public URL.
+
+## Submission checklist
+
+- [ ] GitHub repository link
+- [ ] Live Vercel URL with seeded demo data
+- [ ] This README (setup, architecture, credentials)
+- [ ] 3–5 minute demo video walking through every feature above
+- [ ] Cohort submission form + 1–2 minute self-feedback video

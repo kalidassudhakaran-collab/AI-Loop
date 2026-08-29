@@ -191,10 +191,10 @@ export async function createManyWorkspaceFeedback(
   rows: BulkFeedbackCreateInput[],
 ) {
   if (rows.length === 0) {
-    return { count: 0 };
+    return { count: 0, ids: [] as string[] };
   }
 
-  return prisma.feedback.createMany({
+  const created = await prisma.feedback.createManyAndReturn({
     data: rows.map((row) => ({
       content: row.content,
       channel: row.channel,
@@ -206,7 +206,13 @@ export async function createManyWorkspaceFeedback(
       status: row.status ?? "NEW",
       workspaceId,
     })),
+    select: { id: true },
   });
+
+  return {
+    count: created.length,
+    ids: created.map((row) => row.id),
+  };
 }
 
 export async function listWorkspaceThemes(workspaceId: string) {

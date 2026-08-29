@@ -46,7 +46,7 @@ export function FeedbackForm({ canCreate }: FeedbackFormProps) {
       }),
     });
 
-    const data = (await response.json()) as { error?: string };
+    const data = (await response.json()) as { error?: string; classification?: { classified: boolean } };
 
     setIsLoading(false);
 
@@ -58,7 +58,11 @@ export function FeedbackForm({ canCreate }: FeedbackFormProps) {
     setContent("");
     setCustomerLabel("");
     setSourceRef("");
-    setSuccess("Feedback added successfully.");
+    setSuccess(
+      data.classification?.classified
+        ? "Feedback added and classified with Claude."
+        : "Feedback added and queued for AI classification.",
+    );
     router.refresh();
   }
 

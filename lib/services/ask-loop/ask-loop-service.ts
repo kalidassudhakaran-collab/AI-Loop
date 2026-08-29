@@ -157,7 +157,7 @@ export async function askLoop(params: {
       {
         status: "AI_PROVIDER_UNAVAILABLE",
         message:
-          "AI answer generation is not configured yet. Evidence was retrieved successfully — set ANTHROPIC_API_KEY to generate grounded answers.",
+          "AI answer generation is not configured yet. Evidence was retrieved successfully — ADD API: set ANTHROPIC_API_KEY in .env to generate grounded answers.",
         answer: null,
         citations: citationPayload(retrieval.evidence, new Map()),
       },

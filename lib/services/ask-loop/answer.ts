@@ -50,7 +50,7 @@ export async function generateGroundedAskLoopAnswer(params: {
 }): Promise<ValidatedAskLoopAnswer> {
   if (!isAnthropicConfigured()) {
     throw new AiServiceError(
-      "AI answer generation is not configured. Set ANTHROPIC_API_KEY.",
+      "AI answer generation is not configured. ADD API: set ANTHROPIC_API_KEY in .env.",
       503,
     );
   }

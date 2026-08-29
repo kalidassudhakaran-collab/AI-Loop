@@ -1,18 +1,18 @@
-services:
-  postgres:
-    # pgvector-enabled Postgres 16 (drop-in for prior postgres:16 data volume in most cases)
-    image: pgvector/pgvector:pg16
-    container_name: loop-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: loop
-      POSTGRES_USER: loop_user
-      POSTGRES_PASSWORD: loop_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - loop_pgdata:/var/lib/postgresql/data
-
-volumes:
-  loop_pgdata:
-
+services:
+  postgres:
+    # pgvector-enabled Postgres 16 (drop-in for prior postgres:16 data volume in most cases)
+    image: pgvector/pgvector:pg16
+    container_name: loop-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: loop
+      POSTGRES_USER: loop_user
+      POSTGRES_PASSWORD: loop_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - loop_pgdata:/var/lib/postgresql/data
+
+volumes:
+  loop_pgdata:
+

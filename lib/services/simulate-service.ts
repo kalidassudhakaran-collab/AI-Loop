@@ -1,4 +1,5 @@
 import type { Sentiment } from "@prisma/client";
+import { queueClassificationOnIngest } from "@/lib/services/ai/queue-classification";
 import { createManyWorkspaceFeedback } from "@/lib/services/feedback-service";
 import { FEEDBACK_CHANNELS } from "@/lib/validation/feedback";
 
@@ -92,9 +93,11 @@ export async function simulateSupportTicketChannel(workspaceId: string) {
   }));
 
   const result = await createManyWorkspaceFeedback(workspaceId, rows);
+  const queued = queueClassificationOnIngest(workspaceId, result.ids);
 
   return {
     channel: "Support ticket",
     created: result.count,
+    classificationQueued: queued.queued,
   };
 }

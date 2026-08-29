@@ -96,7 +96,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
       <Card>
         <CardHeader
           title="AI classification"
-          description="Explicitly classify feedback with Claude. Never runs automatically on page load."
+          description="Claude tags new items on ingest. Use this panel to back-fill or re-classify — it never runs on page load."
         />
         <BatchClassifyPanel
           canClassify={canClassify}

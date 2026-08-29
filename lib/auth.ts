@@ -9,6 +9,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
+  // ADD locally: NEXTAUTH_SECRET in .env (gitignored). Never hardcode a secret.
   pages: {
     signIn: "/login",
   },

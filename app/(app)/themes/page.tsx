@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ThemesActions } from "@/components/themes/ThemesActions";
 import { EmbeddingPanel } from "@/components/themes/EmbeddingPanel";
 import { Badge } from "@/components/ui/Badge";
@@ -95,9 +96,12 @@ export default async function ThemesPage() {
                           className="inline-block h-3 w-3 rounded-full"
                           style={{ backgroundColor: theme.color }}
                         />
-                        <span className="font-medium text-slate-900">
+                        <Link
+                          href={`/inbox?themeId=${theme.id}`}
+                          className="font-medium text-indigo-700 hover:underline"
+                        >
                           {theme.name}
-                        </span>
+                        </Link>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-600">

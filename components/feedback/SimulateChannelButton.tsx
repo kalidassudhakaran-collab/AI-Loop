@@ -34,6 +34,7 @@ export function SimulateChannelButton({ canSimulate }: SimulateChannelButtonProp
     const data = (await response.json()) as {
       created?: number;
       channel?: string;
+      classificationQueued?: number;
       error?: string;
     };
 
@@ -45,7 +46,11 @@ export function SimulateChannelButton({ canSimulate }: SimulateChannelButtonProp
     }
 
     setSuccess(
-      `Imported ${data.created ?? 0} sample ${data.channel ?? "channel"} items.`,
+      `Imported ${data.created ?? 0} sample ${data.channel ?? "channel"} items${
+        data.classificationQueued
+          ? ` and queued ${data.classificationQueued} for classification`
+          : ""
+      }.`,
     );
     router.refresh();
   }

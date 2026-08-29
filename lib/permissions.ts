@@ -29,6 +29,9 @@ export const THEME_WRITE_ROLES: Role[] = [Role.ADMIN, Role.ANALYST];
 /** Roles allowed to generate embeddings. */
 export const EMBEDDING_WRITE_ROLES: Role[] = [Role.ADMIN, Role.ANALYST];
 
+/** Roles allowed to generate Voice-of-Customer reports. */
+export const REPORT_GENERATE_ROLES: Role[] = [Role.ADMIN, Role.ANALYST];
+
 export function hasRole(userRole: Role, allowedRoles: readonly Role[]): boolean {
   return allowedRoles.includes(userRole);
 }

@@ -3,6 +3,7 @@ import {
   createManyWorkspaceFeedback,
   type BulkFeedbackCreateInput,
 } from "@/lib/services/feedback-service";
+import { queueClassificationOnIngest } from "@/lib/services/ai/queue-classification";
 import {
   csvRowSchema,
   normalizeChannel,
@@ -18,6 +19,7 @@ export type CsvImportResult = {
   imported: number;
   failed: number;
   failures: CsvImportFailure[];
+  classificationQueued: number;
 };
 
 type CsvRecord = Record<string, string>;
@@ -46,6 +48,7 @@ export async function importFeedbackCsv(
           message: parsed.errors[0]?.message ?? "Unable to parse CSV",
         },
       ],
+      classificationQueued: 0,
     };
   }
 
@@ -104,13 +107,20 @@ export async function importFeedbackCsv(
     });
   });
 
+  let classificationQueued = 0;
+
   if (validRows.length > 0) {
-    await createManyWorkspaceFeedback(workspaceId, validRows);
+    const created = await createManyWorkspaceFeedback(workspaceId, validRows);
+    classificationQueued = queueClassificationOnIngest(
+      workspaceId,
+      created.ids,
+    ).queued;
   }
 
   return {
     imported: validRows.length,
     failed: failures.length,
     failures,
+    classificationQueued,
   };
 }

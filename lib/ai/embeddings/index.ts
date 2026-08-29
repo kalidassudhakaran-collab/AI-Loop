@@ -9,6 +9,7 @@ import {
 /**
  * Resolve the active embedding provider.
  * Default: none configured (never invents fake vectors).
+ * ADD API is not required here — optional local Ollama via EMBEDDING_PROVIDER=ollama.
  */
 export function getEmbeddingProvider(): EmbeddingProvider | null {
   const selected = process.env.EMBEDDING_PROVIDER?.trim().toLowerCase();

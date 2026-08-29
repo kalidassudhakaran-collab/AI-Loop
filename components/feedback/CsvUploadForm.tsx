@@ -8,6 +8,7 @@ type ImportResult = {
   imported: number;
   failed: number;
   failures: Array<{ row: number; message: string }>;
+  classificationQueued?: number;
   error?: string;
 };
 
@@ -86,6 +87,9 @@ export function CsvUploadForm({ canImport }: CsvUploadFormProps) {
           <p className="font-medium text-slate-900">Import completed</p>
           <p className="mt-1 text-slate-700">
             Imported: {result.imported} · Failed: {result.failed}
+            {typeof result.classificationQueued === "number"
+              ? ` · Queued for classification: ${result.classificationQueued}`
+              : ""}
           </p>
           {result.failures.length > 0 ? (
             <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-600">

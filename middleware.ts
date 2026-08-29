@@ -7,5 +7,7 @@ export const config = {
     "/ask/:path*",
     "/settings/:path*",
     "/themes/:path*",
+    "/reports/:path*",
+    "/share/:path*",
   ],
 };

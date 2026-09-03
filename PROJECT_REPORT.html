@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LOOP — Project Report (CITS8123)</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --accent: #4f46e5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0 auto;
+      max-width: 800px;
+      padding: 48px 32px 64px;
+      font-family: "Segoe UI", Georgia, serif;
+      color: var(--ink);
+      line-height: 1.55;
+      background: #fff;
+    }
+    h1 { font-size: 1.75rem; margin: 0 0 0.25rem; }
+    h2 {
+      font-size: 1.25rem;
+      margin: 2rem 0 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 2px solid var(--accent);
+    }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; }
+    p, li { color: var(--ink); }
+    .sub { color: var(--muted); margin-top: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.75rem 0 1rem;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.45rem 0.6rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f8fafc; }
+    pre, code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.82rem;
+    }
+    pre {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      padding: 0.85rem 1rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    a { color: var(--accent); }
+    .meta { font-size: 0.95rem; }
+    .shot {
+      border: 1px dashed #94a3b8;
+      background: #f8fafc;
+      padding: 1rem;
+      margin: 0.5rem 0 1rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .print-hint {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+    @media print {
+      .print-hint { display: none; }
+      body { padding: 0; max-width: none; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-hint">
+    <strong>Save as PDF:</strong> Press <kbd>Ctrl+P</kbd> → Destination: <em>Save as PDF</em> → save the file,
+    upload to Google Drive, then paste the share link in the submission form.
+    Or use the GitHub Markdown link after push.
+  </div>
+
+  <h1>LOOP — AI Customer-Feedback Intelligence Platform</h1>
+  <p class="sub">Project Report · Intern ID <strong>CITS8123</strong> · Zidio / CodTech (M1–M4)</p>
+
+  <table class="meta">
+    <tr><th>Live URL</th><td><a href="https://ai-loop-lime.vercel.app">https://ai-loop-lime.vercel.app</a></td></tr>
+    <tr><th>GitHub</th><td><a href="https://github.com/kalidassudhakaran-collab/AI-Loop">https://github.com/kalidassudhakaran-collab/AI-Loop</a></td></tr>
+  </table>
+
+  <h2>1. Overview</h2>
+  <p>
+    <strong>LOOP</strong> is a multi-tenant Voice-of-Customer web application that turns scattered
+    customer feedback (support tickets, reviews, surveys, sales notes, CSV uploads) into themes,
+    sentiment trends, grounded Q&amp;A, and leadership-ready digests.
+  </p>
+  <p><em>Headline: LOOP turns scattered customer feedback into a ranked, evidence-backed list of what to do next.</em></p>
+  <h3>Problem</h3>
+  <p>Teams struggle to triage unstructured feedback across channels. Manual tagging is slow and leadership reports are hard to keep evidence-based.</p>
+  <h3>Solution</h3>
+  <ul>
+    <li>Secure workspace-scoped ingest and storage</li>
+    <li>AI-assisted classification and Ask LOOP answers with citations (no invented quotes)</li>
+    <li>RBAC: Admin / Analyst / Viewer</li>
+    <li>VoC reports from pre-computed stats + AI narrative; shareable and printable</li>
+  </ul>
+  <h3>Demo credentials</h3>
+  <table>
+    <tr><th>Role</th><th>Email</th><th>Password</th></tr>
+    <tr><td>Admin</td><td>admin@demo.loop</td><td>DemoAdmin123!</td></tr>
+    <tr><td>Analyst</td><td>analyst@demo.loop</td><td>DemoAnalyst123!</td></tr>
+    <tr><td>Viewer</td><td>viewer@demo.loop</td><td>DemoViewer123!</td></tr>
+  </table>
+
+  <h2>2. Tech Stack</h2>
+  <table>
+    <tr><th>Layer</th><th>Technology</th></tr>
+    <tr><td>Frontend</td><td>Next.js 14 (App Router), React, TypeScript, Tailwind CSS</td></tr>
+    <tr><td>Auth</td><td>NextAuth (credentials + JWT)</td></tr>
+    <tr><td>API</td><td>Route Handlers + Zod</td></tr>
+    <tr><td>Database</td><td>PostgreSQL (Neon) + Prisma + pgvector</td></tr>
+    <tr><td>Analytics</td><td>Recharts</td></tr>
+    <tr><td>Import</td><td>Papaparse (CSV)</td></tr>
+    <tr><td>AI text</td><td>Anthropic Claude (preferred) / Google Gemini fallback</td></tr>
+    <tr><td>Embeddings</td><td>Gemini embedding model @ 768-d (optional Ollama)</td></tr>
+    <tr><td>Hosting</td><td>Vercel + Neon</td></tr>
+  </table>
+  <p><strong>Milestones:</strong> M1 Foundation · M2 Core app · M3 AI (classify, themes, Ask LOOP) · M4 VoC reports &amp; polish.</p>
+
+  <h2>3. Architecture &amp; Screenshots</h2>
+  <h3>Architecture</h3>
+  <pre>Browser (App Router UI)
+    │  session cookie only — never trusted client workspaceId
+    ▼
+Next.js Route Handlers (auth + RBAC + Zod)
+    ├── Prisma → PostgreSQL (+ pgvector)
+    ├── Claude / Gemini (server-only API keys)
+    └── Embeddings → vector(768) retrieval for Ask LOOP</pre>
+  <p>
+    Business logic lives in <code>lib/services/*</code>. UI never talks to the database or AI providers directly.
+    Ask LOOP: question → embed → retrieve → evidence → optional LLM answer with validated citations.
+  </p>
+  <h3>Screenshots</h3>
+  <p>Paste live screenshots below when exporting the final PDF (Admin session unless noted).</p>
+  <div class="shot"><strong>Figure 1 — Login</strong><br />[Insert screenshot: /login]</div>
+  <div class="shot"><strong>Figure 2 — Dashboard</strong><br />[Insert screenshot: analytics]</div>
+  <div class="shot"><strong>Figure 3 — Inbox</strong><br />[Insert screenshot: filters + feedback list]</div>
+  <div class="shot"><strong>Figure 4 — Themes / embeddings</strong><br />[Insert screenshot]</div>
+  <div class="shot"><strong>Figure 5 — Ask LOOP</strong><br />[Insert screenshot: Q&amp;A + evidence]</div>
+  <div class="shot"><strong>Figure 6 — Reports</strong><br />[Insert screenshot: VoC report]</div>
+  <div class="shot"><strong>Figure 7 — Viewer RBAC</strong><br />[Insert screenshot: read-only banners]</div>
+
+  <h2>4. Conclusion</h2>
+  <p>
+    LOOP is a complete M1–M4 product: multi-tenant feedback operations, analytics, grounded AI Q&amp;A,
+    and leadership reports, deployed at <a href="https://ai-loop-lime.vercel.app">ai-loop-lime.vercel.app</a>
+    with source on GitHub. The design prioritizes trustworthy AI—workspace isolation, role checks,
+    and answers grounded in real feedback rather than invented content.
+  </p>
+  <p><strong>Future work:</strong> auto-embed on ingest, more channel integrations, stronger rate-limit queues, Claude-only production path when available.</p>
+
+  <p class="sub" style="margin-top:2rem;">Prepared for CodTech / Zidio internship submission — Intern ID CITS8123.</p>
+</body>
+</html>

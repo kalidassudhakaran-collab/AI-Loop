@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -47,8 +45,9 @@ export function LoginForm() {
         return;
       }
 
-      router.push("/dashboard");
-      router.refresh();
+      // Full navigation so the session cookie is present before middleware runs.
+      window.location.assign("/dashboard");
+      return;
     } catch {
       setError("Login failed. Check your connection and try again.");
     } finally {
@@ -90,7 +89,10 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-slate-600">
         No account yet?{" "}
-        <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-700">
+        <Link
+          href="/signup"
+          className="font-medium text-indigo-600 hover:text-indigo-700"
+        >
           Create a workspace
         </Link>
       </p>

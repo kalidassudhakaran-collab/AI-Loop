@@ -39,7 +39,11 @@ export function LoginForm() {
       }
 
       if (result.error) {
-        setError("Invalid email or password");
+        setError(
+          result.error === "CredentialsSignin"
+            ? "Invalid email or password"
+            : `Sign-in failed (${result.error}). Check NEXTAUTH_SECRET and DATABASE_URL on Vercel.`,
+        );
         return;
       }
 

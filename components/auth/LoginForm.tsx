@@ -19,21 +19,37 @@ export function LoginForm() {
     setError("");
     setIsLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await Promise.race([
+        signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        }),
+        new Promise<null>((resolve) => {
+          setTimeout(() => resolve(null), 25000);
+        }),
+      ]);
 
-    setIsLoading(false);
+      if (!result) {
+        setError(
+          "Login timed out. Wait a few seconds and try again (Neon may be waking up).",
+        );
+        return;
+      }
 
-    if (result?.error) {
-      setError("Invalid email or password");
-      return;
+      if (result.error) {
+        setError("Invalid email or password");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Login failed. Check your connection and try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (

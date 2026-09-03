@@ -6,7 +6,7 @@ import { isAiConfigured } from "@/lib/ai/config";
 import { prisma } from "@/lib/db";
 import { EmbeddingProviderError } from "@/lib/ai/embeddings/types";
 import { VectorSupportError } from "@/lib/services/embedding-service";
-import { generateGroundedAskLoopAnswer } from "@/lib/services/ask-loop/answer";
+import { generateGroundedAskLoopAnswer, buildEvidenceSummaryAnswer } from "@/lib/services/ask-loop/answer";
 import { retrieveAskLoopEvidence } from "@/lib/services/ask-loop/retrieve";
 import type { AskLoopStatus } from "@/lib/validation/ask-loop";
 import type { AskLoopEvidenceItem } from "@/lib/services/ask-loop/retrieve";
@@ -105,7 +105,7 @@ export async function askLoop(params: {
     return withDebug({
       status: "NO_EMBEDDINGS",
       message:
-        "Semantic search is not configured yet. Generate embeddings before using Ask LOOP.",
+        "No feedback embeddings yet. Open Themes → Embedding infrastructure → generate embeddings for sample feedback, then ask again.",
       answer: null,
       citations: [],
     });
@@ -155,13 +155,24 @@ export async function askLoop(params: {
   }
 
   if (!aiConfigured) {
+    const fallback = buildEvidenceSummaryAnswer({
+      question,
+      evidence: retrieval.evidence,
+    });
+    const reasons = new Map(
+      fallback.citations.map((citation) => [
+        citation.feedbackId,
+        citation.reason,
+      ]),
+    );
+
     return withDebug(
       {
-        status: "AI_PROVIDER_UNAVAILABLE",
+        status: "ANSWERED",
         message:
-          "AI answer generation is not configured yet. Evidence was retrieved successfully — ADD API: set GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in .env.",
-        answer: null,
-        citations: citationPayload(retrieval.evidence, new Map()),
+          "Retrieved evidence summarized without an LLM (no AI key configured).",
+        answer: fallback.answer,
+        citations: citationPayload(retrieval.evidence, reasons),
       },
       {
         retrievedCount: retrieval.retrieved.length,
@@ -211,17 +222,26 @@ export async function askLoop(params: {
       },
     );
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to generate a grounded answer.";
+    // Free-tier rate limits: still return a grounded evidence summary for demos.
+    const fallback = buildEvidenceSummaryAnswer({
+      question,
+      evidence: retrieval.evidence,
+    });
+    const reasons = new Map(
+      fallback.citations.map((citation) => [
+        citation.feedbackId,
+        citation.reason,
+      ]),
+    );
+    const providerMessage =
+      error instanceof Error ? error.message : "AI answer generation failed";
 
     return withDebug(
       {
-        status: "ERROR",
-        message,
-        answer: null,
-        citations: citationPayload(retrieval.evidence, new Map()),
+        status: "ANSWERED",
+        message: `AI narrative unavailable (${providerMessage}). Showing evidence-based summary instead.`,
+        answer: fallback.answer,
+        citations: citationPayload(retrieval.evidence, reasons),
       },
       {
         retrievedCount: retrieval.retrieved.length,

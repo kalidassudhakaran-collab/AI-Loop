@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   getExpectedEmbeddingDimensions,
   EMBEDDING_DIMENSIONS,
@@ -10,8 +9,12 @@ import {
 } from "@/lib/ai/embeddings/types";
 import { getGeminiApiKey, isGeminiConfigured } from "@/lib/ai/config";
 
-/** Gemini text-embedding-004 defaults to 768-d — matches pgvector column. */
-export const GEMINI_EMBEDDING_DEFAULT_MODEL = "text-embedding-004";
+/**
+ * Current Gemini embedding model (text-embedding-004 was shut down Jan 2026).
+ * Supports Matryoshka output sizes including 768 — matches pgvector column.
+ * @see https://ai.google.dev/gemini-api/docs/embeddings
+ */
+export const GEMINI_EMBEDDING_DEFAULT_MODEL = "gemini-embedding-001";
 
 /**
  * Free-tier Gemini embeddings for Ask LOOP.
@@ -23,8 +26,6 @@ export const GEMINI_EMBEDDING_DEFAULT_MODEL = "text-embedding-004";
 export class GeminiEmbeddingProvider implements EmbeddingProvider {
   readonly id = "gemini";
 
-  private client: GoogleGenerativeAI | null = null;
-
   isConfigured(): boolean {
     return (
       isGeminiConfigured() &&
@@ -32,17 +33,13 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
     );
   }
 
-  private getClient(): GoogleGenerativeAI {
-    if (!this.client) {
-      this.client = new GoogleGenerativeAI(getGeminiApiKey());
-    }
-    return this.client;
-  }
-
   private getModel(): string {
-    return (
-      process.env.EMBEDDING_MODEL?.trim() || GEMINI_EMBEDDING_DEFAULT_MODEL
-    );
+    const configured = process.env.EMBEDDING_MODEL?.trim();
+    // Old default was retired — remap silently so existing .env keeps working.
+    if (!configured || configured === "text-embedding-004") {
+      return GEMINI_EMBEDDING_DEFAULT_MODEL;
+    }
+    return configured;
   }
 
   async generateEmbedding(text: string): Promise<EmbeddingGenerationResult> {
@@ -59,29 +56,43 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
 
     const expected = getExpectedEmbeddingDimensions() || EMBEDDING_DIMENSIONS;
     const modelName = this.getModel();
+    const apiKey = getGeminiApiKey();
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:embedContent?key=${encodeURIComponent(apiKey)}`;
 
     try {
-      const model = this.getClient().getGenerativeModel({ model: modelName });
-      // SDK typings vary by version; use embedContent with plain text.
-      const result = await model.embedContent(trimmed);
-      let values = result.embedding?.values ?? [];
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: `models/${modelName}`,
+          content: {
+            parts: [{ text: trimmed }],
+          },
+          // Request 768-d to match Embedding.vector(768) / HNSW index
+          outputDimensionality: expected,
+        }),
+      });
 
-      // If the API returns a larger vector, truncate/pad is unsafe — require match.
-      if (values.length !== expected) {
-        // Retry with explicit task type via request object when supported.
-        const retry = await model.embedContent({
-          content: { role: "user", parts: [{ text: trimmed }] },
-        });
-        values = retry.embedding?.values ?? [];
+      const payload = (await response.json()) as {
+        error?: { message?: string };
+        embedding?: { values?: number[] };
+      };
+
+      if (!response.ok) {
+        throw new EmbeddingProviderError(
+          payload.error?.message ??
+            `Gemini embedding HTTP ${response.status}`,
+        );
       }
 
+      const values = payload.embedding?.values ?? [];
       if (!values.length) {
         throw new EmbeddingProviderError("Gemini returned an empty embedding");
       }
 
       if (values.length !== expected) {
         throw new EmbeddingProviderError(
-          `Gemini embedding dimension mismatch: got ${values.length}, expected ${expected}. Set EMBEDDING_DIMENSIONS or use text-embedding-004.`,
+          `Gemini embedding dimension mismatch: got ${values.length}, expected ${expected}.`,
         );
       }
 

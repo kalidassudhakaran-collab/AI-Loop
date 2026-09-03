@@ -18,6 +18,7 @@ export type ValidatedAskLoopAnswer = {
     feedbackId: string;
     reason?: string;
   }>;
+  source?: "ai" | "evidence_summary";
 };
 
 /**
@@ -41,6 +42,68 @@ export function validateCitations(
   return {
     answer: scrubbedAnswer.replace(/\s{2,}/g, " ").trim(),
     citations,
+    source: "ai",
+  };
+}
+
+/**
+ * Build a grounded answer only from retrieved evidence quotes.
+ * Used when the LLM is rate-limited or unavailable — never invents feedback.
+ */
+export function buildEvidenceSummaryAnswer(params: {
+  question: string;
+  evidence: AskLoopEvidenceItem[];
+}): ValidatedAskLoopAnswer {
+  const evidence = params.evidence;
+  if (evidence.length === 0) {
+    return {
+      answer:
+        "I don't have enough relevant feedback evidence to answer that confidently.",
+      citations: [],
+      source: "evidence_summary",
+    };
+  }
+
+  const sentimentCounts = { POS: 0, NEU: 0, NEG: 0, UNKNOWN: 0 };
+  for (const item of evidence) {
+    if (item.sentiment === "POS") sentimentCounts.POS += 1;
+    else if (item.sentiment === "NEU") sentimentCounts.NEU += 1;
+    else if (item.sentiment === "NEG") sentimentCounts.NEG += 1;
+    else sentimentCounts.UNKNOWN += 1;
+  }
+
+  const toneParts: string[] = [];
+  if (sentimentCounts.NEG)
+    toneParts.push(`${sentimentCounts.NEG} negative`);
+  if (sentimentCounts.POS)
+    toneParts.push(`${sentimentCounts.POS} positive`);
+  if (sentimentCounts.NEU)
+    toneParts.push(`${sentimentCounts.NEU} neutral`);
+
+  const bullets = evidence
+    .slice(0, 5)
+    .map((item, index) => {
+      const sentiment = item.sentiment ? ` (${item.sentiment})` : "";
+      return `${index + 1}. [${item.feedbackId}]${sentiment} ${item.contentPreview}`;
+    })
+    .join("\n");
+
+  const answer = [
+    `Based on ${evidence.length} retrieved feedback item(s) about your question (“${params.question.trim()}”), the tone mix is ${toneParts.join(", ") || "mixed/unclassified"}.`,
+    "",
+    "Key verbatim evidence:",
+    bullets,
+    "",
+    "This summary was assembled only from retrieved workspace feedback (AI narrative unavailable due to provider limits).",
+  ].join("\n");
+
+  return {
+    answer,
+    citations: evidence.map((item) => ({
+      feedbackId: item.feedbackId,
+      reason: "Retrieved as semantically relevant evidence",
+    })),
+    source: "evidence_summary",
   };
 }
 

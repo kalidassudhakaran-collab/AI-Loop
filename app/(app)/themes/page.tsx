@@ -3,13 +3,15 @@ import { ThemesActions } from "@/components/themes/ThemesActions";
 import { EmbeddingPanel } from "@/components/themes/EmbeddingPanel";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { prisma } from "@/lib/db";
 import {
   EMBEDDING_WRITE_ROLES,
   THEME_WRITE_ROLES,
   hasRole,
 } from "@/lib/permissions";
-import { getWorkspaceEmbeddingStats } from "@/lib/services/embedding-service";
+import {
+  getWorkspaceEmbeddingStats,
+  listFeedbackNeedingEmbeddings,
+} from "@/lib/services/embedding-service";
 import { listWorkspaceThemesWithCounts } from "@/lib/services/theme-service";
 import { getAuthenticatedUser } from "@/lib/session";
 
@@ -18,18 +20,13 @@ export default async function ThemesPage() {
   const canManage = hasRole(user.role, THEME_WRITE_ROLES);
   const canEmbed = hasRole(user.role, EMBEDDING_WRITE_ROLES);
 
-  const [themes, embeddingStats, recentFeedback] = await Promise.all([
+  const [themes, embeddingStats, pendingFeedback] = await Promise.all([
     listWorkspaceThemesWithCounts(user.workspaceId),
     getWorkspaceEmbeddingStats(user.workspaceId),
-    prisma.feedback.findMany({
-      where: { workspaceId: user.workspaceId },
-      select: { id: true },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-    }),
+    listFeedbackNeedingEmbeddings(user.workspaceId, 20),
   ]);
 
-  const sampleFeedbackIds = recentFeedback.map((item) => item.id);
+  const sampleFeedbackIds = pendingFeedback.map((item) => item.id);
 
   return (
     <div className="space-y-6">

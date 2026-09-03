@@ -273,6 +273,30 @@ export async function searchSimilarFeedback(params: {
   }));
 }
 
+const EMBED_BATCH_SIZE = 20;
+
+/**
+ * Next feedback items that still need a READY embedding (none / PENDING / FAILED).
+ * Used so each Themes batch advances the queue instead of re-embedding the same 20.
+ */
+export async function listFeedbackNeedingEmbeddings(
+  workspaceId: string,
+  take = EMBED_BATCH_SIZE,
+) {
+  return prisma.feedback.findMany({
+    where: {
+      workspaceId,
+      OR: [
+        { embedding: null },
+        { embedding: { status: { not: "READY" } } },
+      ],
+    },
+    select: { id: true },
+    orderBy: { createdAt: "desc" },
+    take,
+  });
+}
+
 export async function getWorkspaceEmbeddingStats(workspaceId: string) {
   const [totalFeedback, ready, failed, pending] = await Promise.all([
     prisma.feedback.count({ where: { workspaceId } }),
@@ -302,6 +326,8 @@ export async function getWorkspaceEmbeddingStats(workspaceId: string) {
     failed,
     pending,
     notEmbedded: Math.max(totalFeedback - ready - failed - pending, 0),
+    /** Items still missing a READY vector (includes failed/pending retries). */
+    needingEmbeddings: Math.max(totalFeedback - ready, 0),
     provider: getEmbeddingProviderStatus(),
     pgvector: await isPgvectorAvailable(),
   };

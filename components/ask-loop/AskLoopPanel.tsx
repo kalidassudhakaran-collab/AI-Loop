@@ -227,9 +227,13 @@ function StatusBanner({ status, message }: { status: string; message: string }) 
       ? "border-emerald-200 bg-emerald-50 text-emerald-800"
       : status === "INSUFFICIENT_EVIDENCE"
         ? "border-amber-200 bg-amber-50 text-amber-900"
-        : status === "ERROR"
-          ? "border-red-200 bg-red-50 text-red-700"
-          : "border-slate-200 bg-slate-50 text-slate-700";
+        : status === "NO_EMBEDDINGS" ||
+            status === "EMBEDDING_PROVIDER_UNAVAILABLE" ||
+            status === "AI_PROVIDER_UNAVAILABLE"
+          ? "border-amber-200 bg-amber-50 text-amber-900"
+          : status === "ERROR"
+            ? "border-red-200 bg-red-50 text-red-700"
+            : "border-slate-200 bg-slate-50 text-slate-700";
 
   return (
     <div className={`rounded-lg border px-4 py-3 text-sm ${tone}`}>

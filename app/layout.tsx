@@ -14,6 +14,9 @@ export const metadata: Metadata = {
     "Multi-tenant AI customer-feedback intelligence platform for product teams.",
 };
 
+/** Auth/session + DB-backed pages — never prerender at build time on Vercel. */
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{

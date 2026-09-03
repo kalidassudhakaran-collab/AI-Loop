@@ -9,7 +9,8 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
-  // ADD locally: NEXTAUTH_SECRET in .env (gitignored). Never hardcode a secret.
+  // ADD locally / on Vercel: NEXTAUTH_SECRET in env (gitignored). Never hardcode.
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/login",
   },

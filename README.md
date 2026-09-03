@@ -16,7 +16,8 @@ Headline for the demo: **LOOP turns scattered customer feedback into a ranked, e
 - Recharts for analytics
 - Papaparse for CSV import
 - Anthropic Claude API (`@anthropic-ai/sdk`) for classification, Ask LOOP, and VoC reports
-- Optional Ollama embeddings + pgvector for semantic retrieval
+- Google Gemini free-tier fallback (`@google/generative-ai`) when Claude is unavailable
+- Optional Gemini or Ollama embeddings + pgvector for semantic retrieval
 
 ## Features
 
@@ -72,7 +73,7 @@ Business logic lives in `lib/services/*`. UI components call `/api/*` and do not
 
 - Node.js 18+
 - PostgreSQL (Docker Compose included, or Neon/Supabase)
-- Anthropic API key (required for live classification / Ask LOOP / Claude-written reports)
+- Anthropic Claude or Google Gemini API key (Gemini free tier works for demos)
 
 ## Local setup
 
@@ -97,11 +98,15 @@ Copy `.env.example` to `.env`. `.env` is gitignored so you can push without keys
 DATABASE_URL=postgresql://loop_user:loop_password@localhost:5433/loop
 NEXTAUTH_SECRET=your-random-secret-at-least-32-chars
 NEXTAUTH_URL=http://localhost:3000
-# ADD API: paste Anthropic key in .env only — never in git
+# ADD API (free): https://aistudio.google.com/apikey
+GEMINI_API_KEY=
+# Optional paid Claude (preferred when set)
 ANTHROPIC_API_KEY=
-ANTHROPIC_MODEL=
-EMBEDDING_PROVIDER=
+# Ask LOOP embeddings: gemini (free) or ollama (local)
+EMBEDDING_PROVIDER=gemini
 ```
+
+**AI providers:** Claude is used when `ANTHROPIC_API_KEY` is set; otherwise LOOP uses **Google Gemini free tier**. For Ask LOOP, set `EMBEDDING_PROVIDER=gemini` so the same Gemini key also builds embeddings.
 
 4. **Migrate and seed**
 
@@ -181,7 +186,7 @@ loop/
 
 1. Push this repo to GitHub.
 2. Import the **loop** directory (or repo root that contains `loop/`) in Vercel.
-3. In Vercel project settings, ADD API and other secrets as env vars (`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ANTHROPIC_API_KEY`). Do not put keys in the repo.
+3. In Vercel project settings, ADD API and other secrets as env vars (`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `GEMINI_API_KEY`, optional `ANTHROPIC_API_KEY`, `EMBEDDING_PROVIDER=gemini`). Do not put keys in the repo.
 4. Point `DATABASE_URL` at hosted Postgres (Neon or Supabase). Enable the `vector` extension if you use Ask LOOP embeddings.
 5. Run migrations against production: `npx prisma migrate deploy` (from `loop/`) then `npx prisma db seed`.
 6. Confirm the three demo roles can log in on the public URL.

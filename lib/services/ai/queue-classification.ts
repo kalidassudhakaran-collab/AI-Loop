@@ -1,4 +1,4 @@
-import { isAnthropicConfigured } from "@/lib/ai/config";
+import { isAiConfigured } from "@/lib/ai/config";
 import { classifyAndSaveFeedback, classifyFeedbackBatch } from "@/lib/services/ai/classify-and-save";
 
 const BULK_CLASSIFY_LIMIT = 20;
@@ -10,8 +10,12 @@ export async function classifyOnIngest(
   workspaceId: string,
   feedbackId: string,
 ): Promise<{ classified: boolean; error?: string }> {
-  if (!isAnthropicConfigured()) {
-    return { classified: false, error: "ANTHROPIC_API_KEY is not configured. ADD API in .env." };
+  if (!isAiConfigured()) {
+    return {
+      classified: false,
+      error:
+        "No AI key configured. ADD API: set GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in .env.",
+    };
   }
 
   try {
@@ -34,7 +38,7 @@ export function queueClassificationOnIngest(
   feedbackIds: string[],
 ): { queued: number; skipped: number } {
   const unique = Array.from(new Set(feedbackIds));
-  if (!isAnthropicConfigured() || unique.length === 0) {
+  if (!isAiConfigured() || unique.length === 0) {
     return { queued: 0, skipped: unique.length };
   }
 

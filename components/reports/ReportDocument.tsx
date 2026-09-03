@@ -50,9 +50,9 @@ export function ReportDocument({
           Generated {formatDate(createdAt)} by {generatedByName}
         </p>
         <p className="text-xs text-slate-400">
-          {source === "claude"
-            ? `Narrative written by ${model ?? "Claude"} around pre-computed workspace stats.`
-            : "Narrative assembled from pre-computed workspace stats (Claude unavailable or unused)."}
+          {source === "claude" || source === "gemini"
+            ? `Narrative written by ${model ?? source} around pre-computed workspace stats.`
+            : "Narrative assembled from pre-computed workspace stats (AI unavailable or unused)."}
         </p>
       </header>
 

@@ -2,7 +2,7 @@ import {
   generateEmbedding,
   getEmbeddingProviderStatus,
 } from "@/lib/ai/embeddings";
-import { isAnthropicConfigured } from "@/lib/ai/config";
+import { isAiConfigured } from "@/lib/ai/config";
 import { prisma } from "@/lib/db";
 import { EmbeddingProviderError } from "@/lib/ai/embeddings/types";
 import { VectorSupportError } from "@/lib/services/embedding-service";
@@ -31,6 +31,7 @@ export type AskLoopResponse = {
     evidenceIds: string[];
     embeddingProvider: string | null;
     anthropicConfigured: boolean;
+    aiConfigured: boolean;
   };
 };
 
@@ -57,7 +58,7 @@ export async function askLoop(params: {
   includeDebug?: boolean;
 }): Promise<AskLoopResponse> {
   const question = params.question.trim();
-  const anthropicConfigured = isAnthropicConfigured();
+  const aiConfigured = isAiConfigured();
   const embeddingStatus = getEmbeddingProviderStatus();
 
   const withDebug = (
@@ -76,7 +77,8 @@ export async function askLoop(params: {
         minSimilarity: 0,
         evidenceIds: [],
         embeddingProvider: embeddingStatus.provider,
-        anthropicConfigured,
+        anthropicConfigured: aiConfigured,
+        aiConfigured,
         ...extra,
       },
     };
@@ -86,7 +88,7 @@ export async function askLoop(params: {
     return withDebug({
       status: "EMBEDDING_PROVIDER_UNAVAILABLE",
       message:
-        "Semantic search is not configured yet. Set EMBEDDING_PROVIDER=ollama and pull nomic-embed-text.",
+        "Semantic search is not configured yet. Set EMBEDDING_PROVIDER=gemini (free) or ollama.",
       answer: null,
       citations: [],
     });
@@ -152,12 +154,12 @@ export async function askLoop(params: {
     );
   }
 
-  if (!anthropicConfigured) {
+  if (!aiConfigured) {
     return withDebug(
       {
         status: "AI_PROVIDER_UNAVAILABLE",
         message:
-          "AI answer generation is not configured yet. Evidence was retrieved successfully — ADD API: set ANTHROPIC_API_KEY in .env to generate grounded answers.",
+          "AI answer generation is not configured yet. Evidence was retrieved successfully — ADD API: set GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in .env.",
         answer: null,
         citations: citationPayload(retrieval.evidence, new Map()),
       },

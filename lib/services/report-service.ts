@@ -4,8 +4,11 @@ import {
   VOC_REPORT_SYSTEM_PROMPT,
   buildVocReportUserPrompt,
 } from "@/lib/ai/prompts/voc-report";
-import { completeClaudeText } from "@/lib/ai/client";
-import { getAnthropicModel, isAnthropicConfigured } from "@/lib/ai/config";
+import { completeAiText } from "@/lib/ai/client";
+import {
+  getActiveTextModelLabel,
+  isAiConfigured,
+} from "@/lib/ai/config";
 import { prisma } from "@/lib/db";
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import { computeVocReportStats } from "@/lib/services/report-stats";
@@ -143,8 +146,12 @@ function sanitizeNarrative(
 
 async function generateNarrative(
   stats: VocReportStats,
-): Promise<{ narrative: VocClaudeNarrative; source: "claude" | "deterministic"; model: string | null }> {
-  if (!isAnthropicConfigured() || stats.total === 0) {
+): Promise<{
+  narrative: VocClaudeNarrative;
+  source: "claude" | "gemini" | "deterministic";
+  model: string | null;
+}> {
+  if (!isAiConfigured() || stats.total === 0) {
     return {
       narrative: buildDeterministicNarrative(stats),
       source: "deterministic",
@@ -153,13 +160,13 @@ async function generateNarrative(
   }
 
   try {
-    const rawText = await completeClaudeText({
+    const completion = await completeAiText({
       system: VOC_REPORT_SYSTEM_PROMPT,
       user: buildVocReportUserPrompt(stats),
       maxTokens: 1600,
     });
 
-    const parsedJson: unknown = JSON.parse(extractJsonPayload(rawText));
+    const parsedJson: unknown = JSON.parse(extractJsonPayload(completion.text));
     const parsed = vocClaudeNarrativeSchema.safeParse(parsedJson);
     if (!parsed.success) {
       throw new Error(formatZodError(parsed.error));
@@ -167,12 +174,12 @@ async function generateNarrative(
 
     return {
       narrative: sanitizeNarrative(parsed.data, stats),
-      source: "claude",
-      model: getAnthropicModel(),
+      source: completion.provider === "anthropic" ? "claude" : "gemini",
+      model: completion.model || getActiveTextModelLabel(),
     };
   } catch (error) {
     console.error(
-      "VoC Claude narrative failed; using deterministic copy:",
+      "VoC AI narrative failed; using deterministic copy:",
       error instanceof Error ? error.message : error,
     );
     return {

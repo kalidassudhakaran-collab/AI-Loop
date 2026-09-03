@@ -1,6 +1,6 @@
 import { extractJsonPayload } from "@/lib/ai/prompts/classification";
-import { completeClaudeText, AiServiceError } from "@/lib/ai/client";
-import { isAnthropicConfigured } from "@/lib/ai/config";
+import { completeAiText, AiServiceError } from "@/lib/ai/client";
+import { isAiConfigured } from "@/lib/ai/config";
 import {
   buildAskLoopUserPrompt,
   ASK_LOOP_SYSTEM_PROMPT,
@@ -48,9 +48,9 @@ export async function generateGroundedAskLoopAnswer(params: {
   question: string;
   evidence: AskLoopEvidenceItem[];
 }): Promise<ValidatedAskLoopAnswer> {
-  if (!isAnthropicConfigured()) {
+  if (!isAiConfigured()) {
     throw new AiServiceError(
-      "AI answer generation is not configured. ADD API: set ANTHROPIC_API_KEY in .env.",
+      "AI answer generation is not configured. ADD API: set GEMINI_API_KEY (free) or ANTHROPIC_API_KEY in .env.",
       503,
     );
   }
@@ -64,18 +64,19 @@ export async function generateGroundedAskLoopAnswer(params: {
 
   const evidenceIds = new Set(params.evidence.map((item) => item.feedbackId));
 
-  const rawText = await completeClaudeText({
+  const completion = await completeAiText({
     system: ASK_LOOP_SYSTEM_PROMPT,
     user: buildAskLoopUserPrompt(params),
     maxTokens: 1000,
   });
+  const rawText = completion.text;
 
   let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(extractJsonPayload(rawText));
   } catch {
     throw new AiServiceError(
-      "Claude returned invalid JSON for Ask LOOP.",
+      "AI provider returned invalid JSON for Ask LOOP.",
       502,
     );
   }
@@ -83,18 +84,18 @@ export async function generateGroundedAskLoopAnswer(params: {
   const validated = askLoopClaudeAnswerSchema.safeParse(parsedJson);
   if (!validated.success) {
     throw new AiServiceError(
-      `Claude returned an invalid Ask LOOP answer: ${formatZodError(validated.error)}`,
+      `AI provider returned an invalid Ask LOOP answer: ${formatZodError(validated.error)}`,
       502,
     );
   }
 
   const firstPass = validateCitations(validated.data, evidenceIds);
 
-  // If Claude cited only invalid IDs but produced an answer, keep answer with empty citations.
+  // If the model cited only invalid IDs but produced an answer, keep answer with empty citations.
   // If answer is empty after scrubbing, treat as failure.
   if (!firstPass.answer) {
     throw new AiServiceError(
-      "Claude returned an empty or unsupported Ask LOOP answer.",
+      "AI provider returned an empty or unsupported Ask LOOP answer.",
       502,
     );
   }

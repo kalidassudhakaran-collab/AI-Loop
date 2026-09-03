@@ -98,8 +98,8 @@ export function EmbeddingPanel({
         </p>
         <p className="mt-1">
           <span className="font-medium">Expected dimensions:</span>{" "}
-          {stats.provider.expectedDimensions ?? 768} (nomic-embed-text /
-          vector(768))
+          {stats.provider.expectedDimensions ?? 768} (gemini text-embedding-004
+          or nomic-embed-text / vector(768))
         </p>
         <p className="mt-2 text-slate-500">{stats.provider.message}</p>
         <p className="mt-2 text-slate-500">

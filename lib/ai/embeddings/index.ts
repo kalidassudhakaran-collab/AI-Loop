@@ -1,4 +1,5 @@
 import { OllamaEmbeddingProvider } from "@/lib/ai/embeddings/ollama-provider";
+import { GeminiEmbeddingProvider } from "@/lib/ai/embeddings/gemini-provider";
 import { getExpectedEmbeddingDimensions } from "@/lib/ai/embeddings/config";
 import {
   EmbeddingProviderError,
@@ -9,7 +10,7 @@ import {
 /**
  * Resolve the active embedding provider.
  * Default: none configured (never invents fake vectors).
- * ADD API is not required here — optional local Ollama via EMBEDDING_PROVIDER=ollama.
+ * Supported: ollama (local) | gemini (free cloud via GEMINI_API_KEY)
  */
 export function getEmbeddingProvider(): EmbeddingProvider | null {
   const selected = process.env.EMBEDDING_PROVIDER?.trim().toLowerCase();
@@ -20,6 +21,11 @@ export function getEmbeddingProvider(): EmbeddingProvider | null {
 
   if (selected === "ollama") {
     const provider = new OllamaEmbeddingProvider();
+    return provider.isConfigured() ? provider : null;
+  }
+
+  if (selected === "gemini") {
+    const provider = new GeminiEmbeddingProvider();
     return provider.isConfigured() ? provider : null;
   }
 
@@ -41,7 +47,7 @@ export function getEmbeddingProviderStatus(): {
       provider: null,
       expectedDimensions,
       message:
-        "Embedding provider not configured. Set EMBEDDING_PROVIDER=ollama and pull nomic-embed-text (768-d) to enable semantic retrieval.",
+        "Embedding provider not configured. Set EMBEDDING_PROVIDER=gemini (free, needs GEMINI_API_KEY) or ollama (local).",
     };
   }
 
@@ -51,7 +57,10 @@ export function getEmbeddingProviderStatus(): {
       configured: false,
       provider: selected,
       expectedDimensions,
-      message: `Unknown or unavailable embedding provider "${selected}". Supported: ollama.`,
+      message:
+        selected === "gemini"
+          ? `Gemini embeddings unavailable. ADD API: set GEMINI_API_KEY and EMBEDDING_PROVIDER=gemini.`
+          : `Unknown or unavailable embedding provider "${selected}". Supported: gemini, ollama.`,
     };
   }
 
@@ -76,7 +85,7 @@ export async function generateEmbedding(
 
   if (result.dimensions !== expected) {
     throw new EmbeddingProviderError(
-      `Embedding dimension mismatch: got ${result.dimensions}, expected ${expected} (nomic-embed-text / vector(${expected})).`,
+      `Embedding dimension mismatch: got ${result.dimensions}, expected ${expected}.`,
     );
   }
 

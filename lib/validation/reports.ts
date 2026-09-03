@@ -122,7 +122,7 @@ export type VocReportStats = z.infer<typeof vocReportStatsSchema>;
 export const vocReportContentSchema = z.object({
   stats: vocReportStatsSchema,
   narrative: vocClaudeNarrativeSchema,
-  source: z.enum(["claude", "deterministic"]),
+  source: z.enum(["claude", "gemini", "deterministic"]),
   model: z.string().nullable(),
   generatedAt: z.string(),
 });
